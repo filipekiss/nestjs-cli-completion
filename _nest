@@ -1,0 +1,158 @@
+#compdef nest
+
+# vim:ft=zsh:
+#
+__nest_command() {
+    _nest_commands_list=(
+        {n,new}:"Generate Nest application"
+        {g,generate}:"Generate a Nest element"
+        {i,info}:"Display Nest CLI details"
+        {u,update}:"Update Nest dependencies"
+        add:"Add a library"
+    )
+    _describe -t nest-commands "commands" _nest_commands_list
+}
+
+__nest_subcommand() {
+    local subcommand="$words[1]" args
+    args=(
+        '(: * -)'{-h,--help}'[display help information]'
+    )
+
+    case $subcommand in
+        (new|n)
+            args+=(
+                {-d,--dry-run}"[Allow to test changes before execute command]"
+                {-g,--skip-git}"[Allow to skip git repository initialization]"
+                {-s,--skip-install}"[Allow to skip package installation]"
+                {-p,--package-manager}"[Allow to specify package manager (npm or yarn)]"
+                {-l,--language}"[Specify language (ts or js)]"
+                {-c,--collection}"[Specify the Collection that shall be used]"
+                ': :_guard "^-*" application name'
+            )
+            ;;
+        (generate|g)
+            args+=(
+                {-d,--dry-run}"[Allow to test changes before execute command]"
+                "--flat[Enforce flat structure of generated element]"
+                "--no-spec[Disable spec files generation]"
+                {-c,--collection}"[Specify the collection that shall be used]"
+                ": :_nest_generate_schematics"
+                ': :_guard "^-*" ${__nest_schematics_map[${words[2]}]} name'
+                ': :_guard "^-*" path'
+            )
+            ;;
+        (update|u)
+            args+=(
+                "(-f --force)"{-f,--force}"[Call for upgrading instead of updating.]"
+                "(-t --tag)"{-t,--tag}"[Call for upgrading to the latest | beta | rc | next tag]"
+            )
+            ;;
+        (add)
+            args=(
+                ': :_guard "^-*" library name'
+            )
+            ;;
+        *)
+            unset args # clear completion for options that do not have any
+            ;;
+    esac
+
+    if [[ ! -z $args ]]; then
+        [[ $ZSH_VERSION == (4|5.<0-3>)(.*)# ]] &&
+            args=( ${(@)args:#(#i)(+|[a-z0-9][a-z0-9_-]#|\([a-z0-9][a-z0-9_-]#\))} )
+
+        _arguments -C -s -S : $args && ret=0
+    fi
+    return $ret
+}
+
+_nest_generate_schematics() {
+    schematics=(
+    {app,application}:application
+    {ng-app,angular-app}:angular-app
+    {cl,class}:class
+    {config,configuration}:configuration
+    {co,controller}:controller
+    {d,decorator}:decorator
+    {f,filter}:filter
+    {ga,gateway}:gateway
+    {gu,guard}:guard
+    {in,interceptor}:interceptor
+    {interface,interface}:interface
+    {mi,middleware}:middleware
+    {mo,module}:module
+    {pi,pipe}:pipe
+    {pr,provider}:provider
+    {r,resolver}:resolver
+    {s,service}:service
+    {lib,library}:library
+    )
+    _describe -t nest-commands "schematics $words[2]" schematics && ret=0
+    return $ret
+}
+
+_nest() {
+    local curcontext="$curcontext" state line help="-h --help"
+    typeset -A __nest_schematics_map
+
+    __nest_schematics_map=(
+        app application
+        application application
+        ng-app angular-app
+        angular-app angular-app
+        cl class
+        class class
+        config configuration
+        configuration configuration
+        co controller
+        controller controller
+        d decorator
+        decorator decorator
+        f filter
+        filter filter
+        ga gateway
+        gateway gateway
+        gu guard
+        guard guard
+        in interceptor
+        interceptor interceptor
+        interface interface
+        interface interface
+        mi middleware
+        middleware middleware
+        mo module
+        module module
+        pi pipe
+        pipe pipe
+        pr provider
+        provider provider
+        r resolver
+        resolver resolver
+        s service
+        service service
+        lib library
+        library library
+    )
+
+    _arguments -C \
+        "(: -)"{-h,--help}"[Print usage]" \
+        {-v,--version}"[Print version information and quit]" \
+        ": :->command" \
+        "*:: :->option-or-argument" && ret=0
+
+    case $state in
+        (command)
+            __nest_command && ret=0
+            ;;
+        (option-or-argument)
+            curcontext=${curcontext%:*:*}:nest-$words[1]:
+            __nest_subcommand && ret=0
+            ret=0
+            ;;
+    esac
+
+    return $ret
+}
+
+_nest "$@"
